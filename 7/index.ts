@@ -24,14 +24,36 @@ class TreeNode {
         }else {
             this.fileSize = size;
         }
-    }
-    getTotalSize() {
-        if(this.children.length <= 0) {
-            return 0;
+        if(this.isDir && this.parent?.fileSize) {
+            this.parent.fileSize += this.fileSize;
         }
-        return this.children.reduce((prev, curr) => curr.fileSize ? prev + curr.fileSize : prev, 0);
+        console.log("filesize set: " + this.fileSize);
+    }
+    calcDirectorySize() {
+        if(this.children.length <= 0) {
+            this.setFileSize(0);
+        }
+        const totalSize = this.children.reduce((prev, curr) => curr.fileSize ? prev + curr.fileSize : prev, 0);
+        this.setFileSize(totalSize);
+        // console.log("setting dir size for " + this.value + ": " + totalSize + " " + this.fileSize);
     }
 }
+
+function calcAllDirSizes(curr: TreeNode) {
+    if(!curr) { return }
+
+    curr.children.forEach(child => calcAllDirSizes(child));
+
+    if(curr.isDir) {
+        curr.calcDirectorySize();
+        if(curr.fileSize && curr.fileSize < 100000) {
+            totalSizeFound += curr.fileSize;
+        }
+    }
+
+    return;
+}
+
 
 function createFileTree() {
     const rootNode = new TreeNode('/', null, true);
@@ -40,13 +62,9 @@ function createFileTree() {
     runCommands(commands, rootNode);
     console.log(rootNode);
     console.log("Total Size: " + totalSizeFound);
+    calcAllDirSizes(rootNode);
+    console.log(totalSizeFound);
 }
-
-// function getSizeOfAllDirectories(rootNode: TreeNode) {
-//     if(rootNode.children) {
-//
-//     }
-// }
 
 function runCommands(commands: string[][], rootNode: TreeNode) {
     let currNode = rootNode;
@@ -85,7 +103,7 @@ function createCommandArray(output: string[]) {
 }
 
 function readFileLines() {
-    const file = fs.readFileSync('./test.txt', 'utf8');
+    const file = fs.readFileSync('./input.txt', 'utf8');
     return file.split('\n');
 }
 
@@ -104,7 +122,6 @@ function changeDirectory(input: string, currentNode: TreeNode): TreeNode {
 }
 
 function listDirectory(fileList: string[], currentNode: TreeNode) {
-    let dirFileSize = 0;
     fileList.forEach(file => {
         const [info, name] = file.split(' ');
         if(info === 'dir') {
@@ -114,17 +131,8 @@ function listDirectory(fileList: string[], currentNode: TreeNode) {
             const newFile = new TreeNode(name, currentNode);
             newFile.setFileSize(info);
             currentNode.addChild(newFile);
-            console.log(newFile);
-            if(newFile.fileSize) {
-              dirFileSize += newFile.fileSize;
-            console.log(dirFileSize, totalSizeFound, newFile.value);
-            }
         }
     });
-    if( dirFileSize <= 100000) {
-        console.log(dirFileSize + ' is less');
-        totalSizeFound = totalSizeFound + dirFileSize;
-    }
 }
 
 createFileTree();
