@@ -7,18 +7,19 @@ class TreeNode {
     value: string;
     isDir: boolean;
     parent: TreeNode | null;
-    fileSize: number | null;
+    fileSize: number;
     constructor(value: string, parent: TreeNode | null = null, isDir: boolean = false) {
         this.children = [];
         this.value = value;
         this.parent = parent;
         this.isDir = isDir;
-        this.fileSize = null;
+        this.fileSize = 0;
     }
     addChild(node: TreeNode) {
         this.children.push(node);
     }
     setFileSize(size: string | number) {
+        console.log("size: " + size);
         if(typeof size === 'string') {
             this.fileSize = parseInt(size);
         }else {
@@ -33,7 +34,7 @@ class TreeNode {
         if(this.children.length <= 0) {
             this.setFileSize(0);
         }
-        const totalSize = this.children.reduce((prev, curr) => curr.fileSize ? prev + curr.fileSize : prev, 0);
+        const totalSize = this.children.reduce((prev, curr) => prev + curr.fileSize, 0);
         this.setFileSize(totalSize);
         // console.log("setting dir size for " + this.value + ": " + totalSize + " " + this.fileSize);
     }
@@ -46,12 +47,28 @@ function calcAllDirSizes(curr: TreeNode) {
 
     if(curr.isDir) {
         curr.calcDirectorySize();
-        if(curr.fileSize && curr.fileSize < 100000) {
+        if(curr.fileSize < 100000) {
             totalSizeFound += curr.fileSize;
         }
     }
 
     return;
+}
+
+function findDirToDelete(root: TreeNode) {
+    const possibleDirsToDelete: TreeNode[] = []
+    const spaceAvailable = 70000000 - root.fileSize;
+   // BFS for fun
+   const queue: TreeNode[] = [root];
+    while(queue.length) {
+        const curr = queue.shift() as TreeNode;
+        // console.log(curr.fileSize );
+        if(curr.isDir && curr.fileSize + spaceAvailable >= 30000000) {
+            possibleDirsToDelete.push(curr);
+        }
+        curr?.children.forEach(child => queue.push(child));
+    }
+    return possibleDirsToDelete.sort((a, b) => b.fileSize - a.fileSize);
 }
 
 
@@ -63,7 +80,10 @@ function createFileTree() {
     console.log(rootNode);
     console.log("Total Size: " + totalSizeFound);
     calcAllDirSizes(rootNode);
-    console.log(totalSizeFound);
+    // For Part 1
+    // console.log(totalSizeFound);
+    const possibleDirsToDelete = findDirToDelete(rootNode);
+    console.log(possibleDirsToDelete.pop()?.fileSize);
 }
 
 function runCommands(commands: string[][], rootNode: TreeNode) {
@@ -128,9 +148,11 @@ function listDirectory(fileList: string[], currentNode: TreeNode) {
             const newDir = new TreeNode(name, currentNode, true);
             currentNode.addChild(newDir);
         }else {
-            const newFile = new TreeNode(name, currentNode);
-            newFile.setFileSize(info);
-            currentNode.addChild(newFile);
+            if(info.length) {
+                const newFile = new TreeNode(name, currentNode);
+                newFile.setFileSize(info);
+                currentNode.addChild(newFile);
+            }
         }
     });
 }
